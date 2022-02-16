@@ -15,8 +15,3 @@ spring:
     hibernate:
       ddl-auto: update
       use-new-id-generator-mappings: false
-
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848

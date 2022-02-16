@@ -1,8 +1,8 @@
-DROP DATABASE IF EXISTS `spring-cloud`;
-CREATE DATABASE  `spring-cloud` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+DROP DATABASE IF EXISTS `shop`;
+CREATE DATABASE  `shop` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
-USE `spring-cloud`;
+USE `shop`;
 CREATE TABLE `shop_order` (
                               `oid` int NOT NULL AUTO_INCREMENT COMMENT '主键',
                               `username` varchar(255) DEFAULT NULL COMMENT '用户名',
@@ -29,14 +29,3 @@ CREATE TABLE `shop_user` (
                              `telephone` varchar(255) DEFAULT NULL COMMENT '手机号',
                              PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-
-
-
-INSERT INTO shop_product VALUE(NULL,'小米','1000','5000');
-
-INSERT INTO shop_product VALUE(NULL,'华为','2000','5000');
-
-INSERT INTO shop_product VALUE(NULL,'苹果','3000','5000');
-
-INSERT INTO shop_product VALUE(NULL,'OPPO','4000','5000');

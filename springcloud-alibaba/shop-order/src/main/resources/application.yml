@@ -1,5 +1,9 @@
 server:
   port: 8091
+  #tomcat配置
+  tomcat:
+    #tomcat的最大并发值修改为10,默认是200
+    max-threads: 10 #tomcat的最大并发值修改为10,默认是200
 spring:
   application:
     name: service-order
@@ -16,3 +20,15 @@ spring:
     hibernate:
       ddl-auto: update
       use-new-id-generator-mappings: false
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    sentinel:
+      transport:
+        port: 9929 #跟控制台交流的端口,随意指定一个未使用的端口即可
+        dashboard: 127.0.0.1:8080 # 指定控制台服务的地址
+
+service-product: # 调用的提供者的名称
+  ribbon:
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule
