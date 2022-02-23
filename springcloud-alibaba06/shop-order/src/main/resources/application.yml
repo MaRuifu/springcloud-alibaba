@@ -1,0 +1,56 @@
+server:
+  port: 8091
+  #tomcat配置
+  tomcat:
+    #tomcat的最大并发值修改为10,默认是200
+    max-threads: 10 #tomcat的最大并发值修改为10,默认是200
+spring:
+  application:
+    name: service-order
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/spring-cloud?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+    username: root
+    password: Mrf12345
+  zipkin:
+    #开启zipkin分析
+    enabled: true
+    #zipkin服务地址
+    baseUrl: http://127.0.0.1:9411/
+    #让nacos把它当成一个URL，而不要当做服务名
+    discoveryClientEnabled: false
+  sleuth:
+    sampler:
+      #限速器，每秒采集10个请求，防止大并发过载。推荐
+      #rate: 10
+      #采集率，大并发可能采集率数量也会很高。采样的百分比
+      probability: 0.1
+
+
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      use-new-id-generator-mappings: false
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+
+    sentinel:
+      filter:
+        enabled: false
+
+      transport:
+        port: 9929 #跟控制台交流的端口,随意指定一个未使用的端口即可
+        dashboard: 127.0.0.1:8080 # 指定控制台服务的地址
+feign:
+  sentinel:
+    enabled: true
+
+service-product: # 调用的提供者的名称
+  ribbon:
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule
