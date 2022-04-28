@@ -1,0 +1,48 @@
+server:
+  port: 7000
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes: # 路由数组[路由 就是指定当请求满足什么条件的时候转到哪个微服务]
+        - id: product_route  # 当前路由的标识, 要求唯一
+          uri: lb://service-product # 请求要转发到的地址
+          predicates: # 断言(就是路由转发要满足的条件)
+            # 匹配路径转发
+            - Path=/product-serv/** # 当请求路径满足Path指定的规则时,才进行路由转发
+            - After=2022-02-17T11:05:08.020+08:00[Asia/Shanghai] #限制请求时间在2022-02-17之后
+            - Method=GET #限制请求方式为GET
+            - Age=18,60 # 限制年龄只有在18到60岁之间的人能访问 filters:
+          filters: # 过滤器,请求在传递过程中可以通过过滤器对其进行一定的修改
+            - StripPrefix=1 # 转发之前去掉1层路径
+            - SetStatus=200 # 修改返回状态
+            - Log=true,false # 控制日志是否开启
+        - id: order_route  # 当前路由的标识, 要求唯一
+          uri: lb://service-order # 请求要转发到的地址
+          predicates: # 断言(就是路由转发要满足的条件)
+            # 匹配路径转发
+            - Path=/order-serv/** # 当请求路径满足Path指定的规则时,才进行路由转发
+            - After=2022-02-17T11:05:08.020+08:00[Asia/Shanghai] #限制请求时间在2022-02-17之后
+            - Method=GET #限制请求方式为GET
+          filters: # 过滤器,请求在传递过程中可以通过过滤器对其进行一定的修改
+            - StripPrefix=1 # 转发之前去掉1层路径
+  zipkin:
+    #开启zipkin分析
+    enabled: true
+    #zipkin服务地址
+    baseUrl: http://127.0.0.1:9411/
+    #让nacos把它当成一个URL，而不要当做服务名
+    discoveryClientEnabled: false
+  sleuth:
+    sampler:
+      #限速器，每秒采集10个请求，防止大并发过载。推荐
+      #rate: 10
+      #采集率，大并发可能采集率数量也会很高。采样的百分比
+      probability: 0.1

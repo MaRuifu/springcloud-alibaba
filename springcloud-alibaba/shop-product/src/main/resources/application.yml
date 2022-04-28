@@ -1,35 +1,35 @@
-server:
-  port: 8081
-spring:
-  zipkin:
-    #开启zipkin分析
-    enabled: true
-    #zipkin服务地址
-    baseUrl: http://127.0.0.1:9411/
-    #让nacos把它当成一个URL，而不要当做服务名
-    discoveryClientEnabled: false
-  sleuth:
-    sampler:
-      #限速器，每秒采集10个请求，防止大并发过载。推荐
-      #rate: 10
-      #采集率，大并发可能采集率数量也会很高。采样的百分比
-      probability: 0.1
-  application:
-    name: service-product
-  datasource:
-    url: jdbc:mysql://127.0.0.1:3306/spring-cloud?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
-    username: root
-    password: Mrf12345
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  jpa:
-    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-      use-new-id-generator-mappings: false
-
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
+#server:
+#  port: 8081
+#spring:
+#  zipkin:
+#    #开启zipkin分析
+#    enabled: true
+#    #zipkin服务地址
+#    baseUrl: http://127.0.0.1:9411/
+#    #让nacos把它当成一个URL，而不要当做服务名
+#    discoveryClientEnabled: false
+#  sleuth:
+#    sampler:
+#      #限速器，每秒采集10个请求，防止大并发过载。推荐
+#      #rate: 10
+#      #采集率，大并发可能采集率数量也会很高。采样的百分比
+#      probability: 0.1
+#  application:
+#    name: service-product
+#  datasource:
+#    url: jdbc:mysql://127.0.0.1:3306/spring-cloud?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+#    username: root
+#    password: Mrf12345
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#
+#  jpa:
+#    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+#    show-sql: true
+#    hibernate:
+#      ddl-auto: update
+#      use-new-id-generator-mappings: false
+#
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848

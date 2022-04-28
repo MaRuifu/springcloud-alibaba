@@ -1,234 +1,350 @@
-## 链路追踪介绍
+## 服务配置中心介绍
 
-在大型系统的微服务化构建中，一个系统被拆分成了许多模块。这些模块负责不同的功能，组合成系 统，最终可以提供丰富的功能。在这种架构中，一次请求往往需要涉及到多个服务。互联网应用构建在 不同的软件模块集上，这些软件模块，有可能是由不同的团队开发、可能使用不同的编程语言来实现、 有可能布在了几千台服务器，横跨多个不同的数据中心，也就意味着这种架构形式也会存在一些问题:
+首先我们来看一下,微服务架构下关于配置文件的一些问题:
 
-- 如何快速发现问题?
--   如何判断故障影响范围?
--   如何梳理服务依赖以及依赖的合理性?
--   如何分析链路性能问题以及实时容量规划?
+1. 配置文件相对分散。在一个微服务架构下，配置文件会随着微服务的增多变的越来越多，而且分散 在各个微服务中，不好统一配置和管理。
+2. 配置文件无法区分环境。微服务项目可能会有多个环境，例如:测试环境、预发布环境、生产环 境。每一个环境所使用的配置理论上都是不同的，一旦需要修改，就需要我们去各个微服务下手动 维护，这比较困难。
+3. 配置文件无法实时更新。我们修改了配置文件之后，必须重新启动微服务才能使配置生效，这对一 个正在运行的项目来说是非常不友好的。
 
-![链路追踪介绍](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.36.34.png)
+基于上面这些问题，我们就需要**配置中心**的加入来解决这些问题。
 
-分布式链路追踪(Distributed Tracing)，就是将一次分布式请求还原成调用链路，进行日志记录，性 能监控并将一次分布式请求的调用情况集中展示。比如各个服务节点上的耗时、请求具体到达哪台机器 上、每个服务节点的请求状态等等。
+**配置中心的思路是:**
 
-常见的链路追踪技术有下面这些:
+- 首先把项目中各种配置全部都放到一个集中的地方进行统一管理，并提供一套标准的接口。
 
-- **cat** 由大众点评开源，基于Java开发的实时应用监控平台，包括实时应用监控，业务监控 。 集成 方案是通过代码埋点的方式来实现监控，比如: 拦截器，过滤器等。 对代码的侵入性很大，集成 成本较高。风险较大。
--  **zipkin** 由Twitter公司开源，开放源代码分布式的跟踪系统，用于收集服务的定时数据，以解决微 服务架构中的延迟问题，包括:数据的收集、存储、查找和展现。该产品结合spring-cloud-sleuth 使用较为简单， 集成很方便， 但是功能较简单。
-- **pinpoint** :Pinpoint是韩国人开源的基于字节码注入的调用链分析，以及应用监控分析工具。特点 是支持多种插件，UI功能强大，接入端无代码侵入。
-- **skywalking**:SkyWalking是本土开源的基于字节码注入的调用链分析，以及应用监控分析工具。 特点是支持多种插件，UI功能较强，接入端无代码侵入。目前已加入Apache孵化器。
-- **Sleuth**:SpringCloud 提供的分布式系统中链路追踪解决方案。
+-  当各个服务需要获取配置的时候，就来配置中心的接口拉取自己的配置。
 
-> **注意:SpringCloud alibaba**技术栈中并没有提供自己的链路追踪技术的，我们可以采用**Sleuth +Zinkin**来做链路追踪解决方案
+-  当配置中心中的各种参数有更新的时候，也能通知到各个服务实时的过来同步最新的信息，使之动态更新。
 
-## Sleuth入门
+**当加入了服务配置中心之后，我们的系统架构图会变成下面这样**
 
-### Sleuth介绍
+![截屏2021-08-29 下午4.23.36](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.23.36.png)
 
-SpringCloud Sleuth主要功能就是在分布式系统中提供追踪解决方案。它大量借用了Google Dapper的 设计， 先来了解一下Sleuth中的术语和相关概念。
+在业界常见的服务配置中心，有下面这些:
 
-**Trace** 由一组Trace Id相同的Span串联形成一个树状结构。为了实现请求跟踪，当请求到达分布式系统 的入口端点时，只需要服务跟踪框架为该请求创建一个唯一的标识(即TraceId)，同时在分布式系统 内部流转的时候，框架始终保持传递该唯一值，直到整个请求的返回。那么我们就可以使用该唯一标识 将所有的请求串联起来，形成一条完整的请求链路。
+- **Apollo**
 
-**Span** 代表了一组基本的工作单元。为了统计各处理单元的延迟，当请求到达各个服务组件的时候，也 通过一个唯一标识(SpanId)来标记它的开始、具体过程和结束。通过SpanId的开始和结束时间戳， 就能统计该span的调用时间，除此之外，我们还可以获取如事件的名称。请求信息等元数据。
+Apollo是由携程开源的分布式配置中心。特点有很多，比如:配置更新之后可以实时生效，支持灰度发 布功能，并且能对所有的配置进行版本管理、操作审计等功能，提供开放平台API。并且资料也写的很 详细。
 
-**Annotation**
+- **Disconf**
 
-用它记录一段时间内的事件，内部使用的重要注释:
+Disconf是由百度开源的分布式配置中心。它是基于Zookeeper来实现配置变更后实时通知和生效的。
 
--  cs(Client Send)客户端发出请求，开始一个请求的生命
--  sr(Server Received)服务端接受到请求开始进行处理， sr-cs = 网络延迟(服务调用的时间)
-- ss(Server Send)服务端处理完毕准备发送到客户端，ss - sr = 服务器上的请求处理时间
-- cr(Client Reveived)客户端接受到服务端的响应，请求结束。 cr - sr = 请求的总时间
+- **SpringCloud Confifig**
 
+这是Spring Cloud中带的配置中心组件。它和Spring是无缝集成，使用起来非常方便，并且它的配置存 储支持Git。不过它没有可视化的操作界面，配置的生效也不是实时的，需要重启或去刷新。
 
+- **Nacos**
 
-![Annotation](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.40.39.png)
+这是SpingCloud alibaba技术栈中的一个组件，前面我们已经使用它做过服务注册中心。其实它也集成 了服务配置的功能，我们可以直接使用它作为服务配置中心。
 
-### Sleuth入门
+## Nacos Config 入门
 
-微服务名称, traceId, spanid,是否将链路的追踪结果输出到第三方平台
+使用nacos作为配置中心，其实就是将nacos当做一个服务端，将各个微服务看成是客户端，我们将各个微服务的配置文件统一存放在nacos上，然后各个微服务从nacos上拉取配置即可。
 
-[api-gateway,3977125f73391553,3977125f73391553,false]
+接下来我们以商品微服务为例，学习nacos confifig的使用。
 
-[service-order,3977125f73391553,57547b5bf71f8242,false]
-
-[service-product,3977125f73391553,449f5b3f3ef8d5c5,false]
-
-接下来通过之前的项目案例整合Sleuth，完成入门案例的编写。 修改父工程引入Sleuth依赖
-
-
+1. 搭建nacos环境【使用现有的nacos环境即可】
+2. 在微服务中引入nacos的依赖
 
 ```
-<!--链路追踪 Sleuth-->
- <dependency> 
- 		<groupId>org.springframework.cloud</groupId> 
- 		<artifactId>spring-cloud-starter-sleuth</artifactId> 
- </dependency>
-```
-
-启动微服务，调用之后，我们可以在控制台观察到sleuth的日志输出
-
-![截屏2021-05-15 下午10.43.07](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.43.07.png)
-
-其中 5399d5cb061971bd 是TraceId， 5399d5cb061971bd 是SpanId，依次调用有一个全局的 TraceId，将调用链路串起来。仔细分析每个微服务的日志，不难看出请求的具体过程。
-
-查看日志文件并不是一个很好的方法，当微服务越来越多日志文件也会越来越多，通过Zipkin可以将日 志聚合，并进行可视化展示和全文检索。
-
-## Zipkin的集成
-
-### ZipKin介绍
-
-Zipkin 是 Twitter 的一个开源项目，它基于Google Dapper实现，它致力于收集服务的定时数据，以解 决微服务架构中的延迟问题，包括数据的**收集、存储、查找和展现**。
-
-我们可以使用它来收集各个服务器上请求链路的跟踪数据，并通过它提供的REST API接口来辅助我们查 询跟踪数据以实现对分布式系统的监控程序，从而及时地发现系统中出现的延迟升高问题并找出系统性 能瓶颈的根源。
-
-除了面向开发的 API 接口之外，它也提供了方便的UI组件来帮助我们直观的搜索跟踪信息和分析请求链 路明细，比如:可以查询某段时间内各用户请求的处理时间等。
-
-Zipkin 提供了可插拔数据存储方式:In-Memory、MySql、Cassandra 以及 Elasticsearch。![截屏2021-05-15 下午10.44.38](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.44.38.png)
-
-**上图展示了** **Zipkin** **的基础架构，它主要由** **4** **个核心组件构成:**
-
-- Collector:收集器组件，它主要用于处理从外部系统发送过来的跟踪信息，将这些信息转换为 Zipkin内部处理的 Span 格式，以支持后续的存储、分析、展示等功能。
-- Storage:存储组件，它主要对处理收集器接收到的跟踪信息，默认会将这些信息存储在内存中， 我们也可以修改此存储策略，通过使用其他存储组件将跟踪信息存储到数据库中。
-- RESTful API:API 组件，它主要用来提供外部访问接口。比如给客户端展示跟踪信息，或是外接 系统访问以实现监控等。
-
-- Web UI:UI 组件， 基于API组件实现的上层应用。通过UI组件用户可以方便而有直观地查询和分 析跟踪信息。
-
-Zipkin分为两端，一个是 Zipkin服务端，一个是 Zipkin客户端，客户端也就是微服务的应用。 客户端会 配置服务端的 URL 地址，一旦发生服务间的调用的时候，会被配置在微服务里面的 Sleuth 的监听器监 听，并生成相应的 Trace 和 Span 信息发送给服务端。
-
-### ZipKin服务端安装
-
-第1步: 下载ZipKin的jar包
-
-```
-https://search.maven.org/remote_content?g=io.zipkin.java&a=zipkin-server&v=LATEST&c=exec
-```
-
-第2步: 通过命令行，输入下面的命令启动ZipKin Server
-
-```
-java -jar zipkin-server-2.12.9-exec.jar
-```
-
-第3步:通过浏览器访问 http://localhost:9411访问![截屏2021-05-15 下午10.47.12](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.47.12.png)
-
-### Zipkin客户端集成
-
-ZipKin客户端和Sleuth的集成非常简单，只需要在微服务中添加其依赖和配置即可。
-
-第1步:在每个微服务上添加依赖
-
-```
-<dependency> 
-		<groupId>org.springframework.cloud</groupId> 
-		<artifactId>spring-cloud-starter-zipkin</artifactId> 
+<dependency>
+  <groupId>com.alibaba.cloud</groupId> 
+  <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId> 
 </dependency>
 ```
 
-第2步:添加配置
+3. 在微服务中添加nacos confifig的配置
+
+**注意:不能使用原来的application.yml作为配置文件，而是新建一个bootstrap.yml作为配置文件**
+
+配置文件优先级(由高到低):
+
+bootstrap.properties -> bootstrap.yml -> application.properties -> application.yml
 
 ```
+spring:
+  application:
+    name: service-product
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848 #nacos中心地址
+        file-extension: yaml # 配置文件格式 profiles:
+  profiles:
+    active: dev # 环境标识
+```
+
+4. 在nacos中添加配置
+
+> 点击配置列表，点击右边+号，新建配置。在新建配置过程中，要注意下面的细节:
+>
+> 1)Data ID不能随便写，要跟配置文件中的对应，对应关系如图所示
+>
+> 2)配置文件格式要跟配置文件的格式对应，且目前仅仅支持YAML和Properties
+>
+> 3)配置内容按照上面选定的格式书写
+
+![截屏2021-08-29 下午4.30.26](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.30.26.png)
+
+
+
+5. 注释本地的application.yam中的内容， 启动程序进行测试
+
+如果依旧可以成功访问程序，说明我们nacos的配置中心功能已经实现
+
+## Nacos Config 深入
+
+### **配置动态刷新**
+
+在入门案例中，我们实现了配置的远程存放，但是此时如果修改了配置，我们的程序是无法读取到的， 因此，我们需要开启配置的动态刷新功能。
+
+在nacos中的service-product-dev.yaml配置项中添加下面配置:
+
+```
+config:
+  appName: product
+```
+
+方式一:硬编码方式
+
+```
+@RestController
+public class NacosConfigController {
+@Autowired
+private ConfigurableApplicationContext applicationContext; 
+
+	  @GetMapping( "/nacos-config-test1" )
+    public String nacosConfingTest1(){
+    	return (applicationContext.getEnvironment().getProperty("config.appName"));
+    }
+}
+```
+
+方式二:注解方式(推荐)
+
+```
+@RestController
+@RefreshScope /* 只需要在需要动态读取配置的类上添加此注解就可以 */
+public class NacosConfigController { 
+
+@Value("${config.appName}")
+private String appName; 
+
+    @GetMapping("/nacos-config-test2")
+    public String nacosConfingTest2(){
+        return(appName);
+    }
+}
+```
+
+### **配置共享**
+
+当配置越来越多的时候，我们就发现有很多配置是重复的，这时候就考虑可不可以将公共配置文件提取出来，然后实现共享呢?当然是可以的。接下来我们就来探讨如何实现这一功能。
+
+**同一个微服务的不同环境之间共享配置**
+
+如果想在同一个微服务的不同环境之间实现配置共享，其实很简单。只需要提取一个以 spring.application.name 命名的配置文件，然后将其所有环境的公共配置放在里面即可。
+
+1. 新建一个名为service-product.yaml配置存放商品微服务的公共配置
+
+![截屏2021-08-29 下午4.35.11](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.35.11.png)
+
+2. 新建一个名为service-product-test.yaml配置存放测试环境的配置
+
+![截屏2021-08-29 下午4.35.36](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.35.36.png)
+
+3. 新建一个名为service-productr-dev.yaml配置存放开发环境的配置
+
+![截屏2021-08-29 下午4.36.33](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.36.33.png)
+
+4. 添加测试方法
+```
+@RestController
+@RefreshScope
+public class NacosConfigController { 
+
+@Value( "${config.env}" )
+private String env;
+
+/* 3 同一微服务的不同环境下共享配置 */
+@GetMapping( "/nacos-config-test3" )
+    public String nacosConfingTest3(){
+        return(env);
+    }
+}
+```
+
+5. 访问测试
+
+![截屏2021-08-29 下午4.38.26](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.38.26.png)
+
+6. 接下来，修改bootstrap.yml中的配置，将active设置成test，再次访问，观察结果
+
+```
+spring:
+  profiles:
+    active: test # 环境标识
+```
+
+**不同微服务中间共享配置**
+
+不同为服务之间实现配置共享的原理类似于文件引入，就是定义一个公共配置，然后在当前配置中引 入。
+
+1. 在nacos中定义一个DataID为all-service.yaml的配置，用于所有微服务共享
+
+```
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://shop?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true 
+    username: root
+    password: root
+jpa:
+  properties:
+    hibernate:
+      hbm2ddl:
+        auto: update
+		dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+  cloud:
+    nacos:
+      discovery:
+      	server-addr: 127.0.0.1:8848
+```
+
+2. 在nacos的中修改service-product.yaml中为下面内容
+
+```
+server:
+  port: 8081
+config:
+  appName: product
+```
+
+3. 修改bootstrap.yaml
+
+```
+spring:
+  application:
+  	name: service-product
+  profiles:
+    active: dev # 环境标识
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848 #nacos中心地址
+        file-extension: yaml # 配置文件格式
+        shared-dataids: all-service.yaml # 配置要引入的配置 
+        refreshable-dataids: all-service.yaml # 配置要实现动态配置刷新的配置 
+```
+
+4. 启动商品微服务进行测试
+
+
+
+
+## Nacos 的几个概念
+
+**命名空间(Namespace)** 命名空间可用于进行不同环境的配置隔离。一般一个环境划分到一个命名空间
+
+**配置分组(Group)** 配置分组用于将不同的服务可以归类到同一分组。一般将一个项目的配置分到一组
+
+**配置集(Data ID)** 在系统中，一个配置文件通常就是一个配置集。一般微服务的配置就是一个配置集
+
+![截屏2021-08-29 下午4.46.16](https://nas.mrf.ink:10001/images/2021/08/29/2021-08-29-4.46.16.png)
+
+
+
+
+
+结果如下
+
+![image-20220223160522368](https://nas.mrf.ink:10001/images/2022/02/23/image-20220223160522368.png)
+
+```
+# all-service.yaml
+
+
 spring:
   zipkin:
     #开启zipkin分析
     enabled: true
-    #zipkin服务地址
-    baseUrl: http://127.0.0.1:9411/
     #让nacos把它当成一个URL，而不要当做服务名
-    discoveryClientEnabled: false 
+    discoveryClientEnabled: false
   sleuth:
     sampler:
       #限速器，每秒采集10个请求，防止大并发过载。推荐
       #rate: 10
       #采集率，大并发可能采集率数量也会很高。采样的百分比
       probability: 0.1
-```
+  application:
+    name: service-product
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
-第3步: 访问微服务
-
-```
-http://localhost:7000/order-serv/order/prod/1
-```
-
-第4步: 访问zipkin的UI界面，观察效果![截屏2021-05-15 下午10.51.23](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.51.23.png)
-
-第5步:点击其中一条记录，可观察一次访问的详细线路。![截屏2021-05-15 下午10.51.43](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.51.43.png)
-
-## ZipKin数据持久化
-
-Zipkin Server默认会将追踪数据信息保存到内存，但这种方式不适合生产环境。Zipkin支持将追踪数据持久化到mysql数据库或elasticsearch中。
-
-### 使用mysql实现数据持久化
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      use-new-id-generator-mappings: false
 
 ```
-CREATE TABLE IF NOT EXISTS zipkin_spans (
-  `trace_id_high` BIGINT NOT NULL DEFAULT 0 COMMENT 'If non zero, this means the trace uses 128 bit traceIds instead of 64 bit',
-  `trace_id` BIGINT NOT NULL,
-  `id` BIGINT NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  `parent_id` BIGINT,
-  `debug` BIT(1),
-  `start_ts` BIGINT COMMENT 'Span.timestamp(): epoch micros used for endTs query and to implement TTL',`duration` BIGINT COMMENT 'Span.duration(): micros used for minDuration and maxDuration query'
-) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;
 
-ALTER TABLE zipkin_spans ADD UNIQUE KEY(`trace_id_high`, `trace_id`, `id`) COMMENT 'ignore insert on duplicate';
-ALTER TABLE zipkin_spans ADD INDEX(`trace_id_high`, `trace_id`, `id`) COMMENT 'for joining with zipkin_annotations';
-ALTER TABLE zipkin_spans ADD INDEX(`trace_id_high`, `trace_id`) COMMENT 'for getTracesByIds';
-ALTER TABLE zipkin_spans ADD INDEX(`name`) COMMENT 'for getTraces and getSpanNames';
-ALTER TABLE zipkin_spans ADD INDEX(`start_ts`) COMMENT 'for getTraces ordering and range';
 
-CREATE TABLE IF NOT EXISTS zipkin_annotations (
-  `trace_id_high` BIGINT NOT NULL DEFAULT 0 COMMENT 'If non zero, this
-  means the trace uses 128 bit traceIds instead of 64 bit',
-  `trace_id` BIGINT NOT NULL COMMENT 'coincides with
-  zipkin_spans.trace_id',
-  `span_id` BIGINT NOT NULL COMMENT 'coincides with zipkin_spans.id',
-  `a_key` VARCHAR(255) NOT NULL COMMENT 'BinaryAnnotation.key or Annotation.value if type == -1',
-  `a_value` BLOB COMMENT 'BinaryAnnotation.value(), which must be smaller
-  than 64KB',
-  `a_type` INT NOT NULL COMMENT 'BinaryAnnotation.type() or -1 if
-  Annotation',
-  `a_timestamp` BIGINT COMMENT 'Used to implement TTL;
-  Annotation.timestamp or zipkin_spans.timestamp',
-  `endpoint_ipv4` INT COMMENT 'Null when Binary/Annotation.endpoint is null',
-  `endpoint_ipv6` BINARY(16) COMMENT 'Null when Binary/Annotation.endpoint is null, or no IPv6 address',
-  `endpoint_port` SMALLINT COMMENT 'Null when Binary/Annotation.endpoint
-  is null',
-  `endpoint_service_name` VARCHAR(255) COMMENT 'Null when Binary/Annotation.endpoint is null'
-) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;
-
-ALTER TABLE zipkin_annotations ADD UNIQUE KEY(`trace_id_high`, `trace_id`, `span_id`, `a_key`, `a_timestamp`) COMMENT 'Ignore insert on duplicate'; 
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id_high`, `trace_id`, `span_id`) COMMENT 'for joining with zipkin_spans';
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id_high`, `trace_id`) COMMENT 'for getTraces/ByIds';
-ALTER TABLE zipkin_annotations ADD INDEX(`endpoint_service_name`) COMMENT 'for getTraces and getServiceNames';
-ALTER TABLE zipkin_annotations ADD INDEX(`a_type`) COMMENT 'for getTraces'; 
-ALTER TABLE zipkin_annotations ADD INDEX(`a_key`) COMMENT 'for getTraces'; 
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id`, `span_id`, `a_key`) COMMENT 'for dependencies job';
-
-CREATE TABLE IF NOT EXISTS zipkin_dependencies (
-  `day` DATE NOT NULL,
-  `parent` VARCHAR(255) NOT NULL,
-  `child` VARCHAR(255) NOT NULL,
-  `call_count` BIGINT
-) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;
-ALTER TABLE zipkin_dependencies ADD UNIQUE KEY(`day`, `parent`,`child`);
- 
-```
-
-第2步: 在启动ZipKin Server的时候,指定数据保存的mysql的信息
 
 ```
-java -jar zipkin-server-2.12.9-exec.jar --STORAGE_TYPE=mysql -- MYSQL_HOST=127.0.0.1 --MYSQL_TCP_PORT=3306 --MYSQL_DB=zipkin --MYSQL_USER=root - -MYSQL_PASS=root
+# service-product.yaml
+
+config:
+  appName: product
 ```
 
-### 使用elasticsearch实现数据持久化
 
-第1步: 下载elasticsearch 下载地址:https://www.elastic.co/cn/downloads/past-releases/elasticsearch-6-8-4 第2步: 启动elasticsearch
-
-![截屏2021-05-15 下午10.58.33](https://nas.mrf.ink:10001/images/2021/05/15/2021-05-15-10.58.33.png)
-
-第3步: 在启动ZipKin Server的时候，指定数据保存的elasticsearch的信息
 
 ```
-java -jar zipkin-server-2.12.9-exec.jar --STORAGE_TYPE=elasticsearch --ES- HOST=localhost:9200
+# service-product-dev.yaml
+
+config:
+  env: dev
+
+server:
+  port: 8081
+spring:
+  zipkin:
+    #zipkin服务地址
+    baseUrl: http://127.0.0.1:9411/
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/spring-cloud?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+    username: root
+    password: Mrf12345
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
 ```
+
+
+
+```
+# service-product-test.yaml
+
+config:
+  env: test
+
+server:
+  port: 8081
+spring:
+  zipkin:
+    #zipkin服务地址
+    baseUrl: http://127.0.0.1:9411/
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/spring-cloud?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+    username: root
+    password: Mrf12345
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+```
+
